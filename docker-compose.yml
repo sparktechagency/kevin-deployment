@@ -1,0 +1,134 @@
+services:
+  kevin-app:
+    image: kaziomar/kevin:latest
+    container_name: kevin-app
+    restart: unless-stopped
+    working_dir: /var/www
+    env_file: .env
+    networks:
+      - kevin_network_prod
+    volumes:
+      - storage_volume:/var/www/storage
+      - public_assets:/var/www/public
+    depends_on:
+      kevin-db:
+        condition: service_healthy
+      kevin-redis:
+        condition: service_healthy 
+    healthcheck:
+      test: ["CMD", "cgi-fcgi", "-bind", "-connect", "127.0.0.1:9000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  kevin-frontend:
+    image: kaziomar/kevin-frontend:latest
+    container_name: coverage-frontend
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - kevin_network_prod
+    # Frontend usually runs on port 3000 internally
+    
+  queue-worker:
+    image: kaziomar/kevin:latest 
+    container_name: kevin_horizon
+    command: ["php", "artisan", "horizon"]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - kevin_network_prod
+    depends_on:
+      kevin-app:
+        condition: service_healthy 
+      kevin-redis:
+        condition: service_healthy
+
+  scheduler:
+    image: kaziomar/kevin:latest
+    container_name: kevin_scheduler
+    command: ["scheduler", "sh", "-c", "while true; do php /var/www/artisan schedule:run; sleep 60; done"]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - kevin_network_prod
+
+  kevin-db:
+    image: mysql:8.0
+    container_name: kevin-db
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - '${FORWARD_DB_PORT:-3306}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+      - db_data_prod:/var/lib/mysql
+    networks:
+      - kevin_network_prod
+    healthcheck: 
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  kevin-redis:
+    image: redis:7-alpine
+    container_name: kevin-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - kevin_network_prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx-proxy-2:
+    image: nginx:alpine
+    container_name: kevin-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - storage_volume:/var/www/storage:ro
+      - ./certbot_conf:/etc/letsencrypt 
+      - certbot_www:/var/www/certbot
+      - public_assets:/var/www/public:ro
+    networks:
+      - kevin_network_prod
+    depends_on:
+      kevin-app:
+        condition: service_healthy
+      # kevin-frontend: # Uncomment if frontend healthcheck is available
+      #   condition: service_healthy 
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+  
+  certbot:
+    image: certbot/certbot
+    container_name: kevin-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot_conf:/etc/letsencrypt 
+      - certbot_www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - kevin_network_prod
+
+networks:
+  kevin_network_prod:
+    name: kevin_network_prod
+
+volumes:
+  db_data_prod:
+  redis_data_prod:
+  storage_volume:
+  certbot_www:
+  public_assets:

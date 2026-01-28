@@ -1,0 +1,53 @@
+services:
+  kevin-app:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      args:
+        - INSTALL_DEV=true
+    volumes:
+      - ../backend:/var/www
+      - ./.env:/var/www/.env
+
+  queue-worker:
+    volumes:
+      - ../backend:/var/www
+
+  scheduler:
+    volumes:
+      - ../backend:/var/www
+
+  kevin-reverb:
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "--debug"]
+    ports:
+      - "8089:8080"
+    volumes:
+      - ../backend:/var/www
+
+  
+  kevin-node:
+    image: node:22-alpine
+    container_name: kevin_node
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ../backend:/var/www 
+    ports:
+      - "5173:5173" 
+    networks:
+      - kevin_network_prod
+    command: sh -c "npm install && npm run dev -- --host"
+
+  kevin-db:
+    image: mysql:8.0
+    container_name: kevin-db
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3308:3306"
+    volumes:
+      - db_data_prod:/var/lib/mysql
+    networks:
+      - kevin_network_prod
+    healthcheck: 
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
