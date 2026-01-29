@@ -36,6 +36,9 @@ services:
     command: ["queue", "queue:work", "redis", "--timeout=90", "--sleep=3", "--tries=3"]
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - storage_uploads:/var/www/storage/app/public
+      - storage_logs:/var/www/storage/logs
     networks:
       - kevin_network_prod
     depends_on:
@@ -49,6 +52,9 @@ services:
     container_name: kevin_scheduler
     command: ["scheduler", "sh", "-c", "while true; do php /var/www/artisan schedule:run; sleep 60; done"]
     restart: unless-stopped
+    volumes:
+      - storage_uploads:/var/www/storage/app/public
+      - storage_logs:/var/www/storage/logs
     env_file: .env
     networks:
       - kevin_network_prod
