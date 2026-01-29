@@ -8,7 +8,8 @@ services:
     networks:
       - kevin_network_prod
     volumes:
-      - storage_volume:/var/www/storage
+      - storage_uploads:/var/www/storage/app/public
+      - storage_logs:/var/www/storage/logs
       - public_assets:/var/www/public
     depends_on:
       kevin-db:
@@ -28,12 +29,10 @@ services:
     env_file: .env
     networks:
       - kevin_network_prod
-    # Frontend usually runs on port 3000 internally
     
   queue-worker:
     image: kaziomar/kevin:latest 
     container_name: kevin_horizon
-    # command: ["php", "artisan", "horizon"]
     command: ["queue", "queue:work", "redis", "--timeout=90", "--sleep=3", "--tries=3"]
     restart: unless-stopped
     env_file: .env
@@ -99,7 +98,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx:/etc/nginx/conf.d
-      - storage_volume:/var/www/storage:ro
+      - storage_uploads:/var/www/storage/app/public:ro
       - ./certbot_conf:/etc/letsencrypt 
       - certbot_www:/var/www/certbot
       - public_assets:/var/www/public:ro
@@ -108,8 +107,6 @@ services:
     depends_on:
       kevin-app:
         condition: service_healthy
-      # kevin-frontend: # Uncomment if frontend healthcheck is available
-      #   condition: service_healthy 
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
   
   certbot:
@@ -130,6 +127,7 @@ networks:
 volumes:
   db_data_prod:
   redis_data_prod:
-  storage_volume:
   certbot_www:
   public_assets:
+  storage_uploads:
+  storage_logs:
