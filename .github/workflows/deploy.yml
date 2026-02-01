@@ -34,7 +34,8 @@ jobs:
             echo "🧹 Clearing Cache..."
             docker compose exec -T kevin-app php artisan optimize:clear
 
-            docker compose restart nginx-proxy-2
-            
+            echo "Restarting Helpers..."
+            docker compose restart queue-worker scheduler nginx-proxy-2
+
             docker image prune -f
             
