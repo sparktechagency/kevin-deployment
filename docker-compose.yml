@@ -24,7 +24,7 @@ services:
 
   kevin-frontend:
     image: kaziomar/kevin-frontend:latest
-    container_name: coverage-frontend
+    container_name: kevin-frontend
     restart: unless-stopped
     env_file: .env
     networks:
