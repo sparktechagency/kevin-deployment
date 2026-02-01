@@ -11,6 +11,7 @@ services:
       - storage_uploads:/var/www/storage/app/public
       - storage_logs:/var/www/storage/logs
       - public_assets:/var/www/public
+      - storage_framework:/var/www/storage/framework
     depends_on:
       kevin-db:
         condition: service_healthy
@@ -39,6 +40,7 @@ services:
     volumes:
       - storage_uploads:/var/www/storage/app/public
       - storage_logs:/var/www/storage/logs
+      - storage_framework:/var/www/storage/framework
     networks:
       - kevin_network_prod
     depends_on:
@@ -55,6 +57,7 @@ services:
     volumes:
       - storage_uploads:/var/www/storage/app/public
       - storage_logs:/var/www/storage/logs
+      - storage_framework:/var/www/storage/framework
     env_file: .env
     networks:
       - kevin_network_prod
@@ -137,3 +140,4 @@ volumes:
   public_assets:
   storage_uploads:
   storage_logs:
+  storage_framework:
