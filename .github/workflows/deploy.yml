@@ -35,7 +35,7 @@ jobs:
             docker compose exec -T kevin-app php artisan optimize:clear
 
             echo "Restarting Helpers..."
-            docker compose restart queue-worker scheduler nginx-proxy-2
+            docker compose restart queue-worker scheduler kevin-nginx
 
             docker image prune -f
             
