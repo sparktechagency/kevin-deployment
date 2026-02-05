@@ -113,11 +113,27 @@ services:
       - public_assets:/var/www/public:ro
     networks:
       - kevin_network_prod
+    labels:
+      - autoheal=true
     depends_on:
       kevin-app:
         condition: service_healthy
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
-  
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  autoheal:
+    image: willfarrell/autoheal
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   certbot:
     image: certbot/certbot
     container_name: kevin-certbot
