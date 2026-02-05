@@ -98,7 +98,7 @@ services:
       timeout: 5s
       retries: 5
 
-  nginx-proxy-2:
+  kevin-nginx:
     image: nginx:alpine
     container_name: kevin-nginx
     restart: unless-stopped
@@ -118,12 +118,13 @@ services:
     depends_on:
       kevin-app:
         condition: service_healthy
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost || exit 1"]
       interval: 1m
       timeout: 10s
       retries: 3
+      start_period: 30s 
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   autoheal:
     image: willfarrell/autoheal
